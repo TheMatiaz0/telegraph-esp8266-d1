@@ -1,8 +1,23 @@
 import serial
+import serial.tools.list_ports
 import keyboard
 
-ser = serial.Serial('COM6', 921600, timeout=1)
+def find_arduino_port():
+    ports = serial.tools.list_ports.comports()
+    for port in ports:
+        if "Arduino" in port.description or "USB" in port.description:
+            return port.device
+    return None
 
+arduino_port = find_arduino_port()
+
+if not arduino_port:
+    print("No Arduino found. Please check your connection.")
+    exit()
+
+ser = serial.Serial(arduino_port, 921600, timeout=1)
+print(f"Connected to {arduino_port}")
+   
 previous_char = 'b'
 
 while True:
