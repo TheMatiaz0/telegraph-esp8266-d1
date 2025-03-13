@@ -1,6 +1,7 @@
 import serial
 import serial.tools.list_ports
 import keyboard
+import time
 
 def find_arduino_port():
     ports = serial.tools.list_ports.comports()
@@ -9,27 +10,39 @@ def find_arduino_port():
             return port.device
     return None
 
-arduino_port = find_arduino_port()
+def connect_arduino():
+    while True:
+        arduino_port = find_arduino_port()
+        if arduino_port:
+            try:
+                ser = serial.Serial(arduino_port, 921600, timeout=1)
+                print(f"Connected to {arduino_port}")
+                return ser
+            except serial.SerialException:
+                print(f"Error opening serial port {arduino_port}. Retrying...")
+        else:
+            print("No Arduino found. Retrying in 2 seconds...")
+        time.sleep(2)
 
-if not arduino_port:
-    print("No Arduino found. Please check your connection.")
-    exit()
-
-ser = serial.Serial(arduino_port, 921600, timeout=1)
-print(f"Connected to {arduino_port}")
-   
+ser = connect_arduino()
 previous_char = 'b'
 
 while True:
-    if ser.in_waiting > 0:
-        data = ser.read().decode('utf-8').strip()
+    try:
+        if ser.in_waiting > 0:
+            data = ser.read().decode('utf-8').strip()
 
-        if data == 'a' and previous_char != 'a':
-            keyboard.press('space')
-            print("Space pressed!")
-            previous_char = 'a'
+            if data == 'a' and previous_char != 'a':
+                keyboard.press('space')
+                print("Space pressed!")
+                previous_char = 'a'
 
-        elif data == 'b' and previous_char != 'b':
-            keyboard.release('space')
-            print("Space released!")
-            previous_char = 'b'
+            elif data == 'b' and previous_char != 'b':
+                keyboard.release('space')
+                print("Space released!")
+                previous_char = 'b'
+
+    except serial.SerialException:
+        print("Arduino disconnected! Attempting to reconnect...")
+        ser.close()
+        ser = connect_arduino()
